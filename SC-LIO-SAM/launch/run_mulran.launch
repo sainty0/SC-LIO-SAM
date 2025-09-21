@@ -1,20 +1,20 @@
 <launch>
 
-    <arg name="project" default="lio_sam"/>
-    
-    <!-- Parameters -->
-    <rosparam file="$(find lio_sam)/config/params_mulran.yaml" command="load" />
+  <arg name="project" default="lio_sam"/>
+  <arg name="params_file" default="$(find lio_sam)/config/params_mulran.yaml"/>
 
-    <!--- LOAM -->
-    <include file="$(find lio_sam)/launch/include/module_loam.launch" />
+  <!-- Parameters -->
+  <rosparam file="$(arg params_file)" command="load"/>
 
-    <!--- Robot State TF -->
-    <include file="$(find lio_sam)/launch/include/module_robot_state_publisher.launch" />
+  <!--- LOAM -->
+  <include file="$(find lio_sam)/launch/include/module_loam.launch" />
 
-    <!--- Run Navsat -->
-    <include file="$(find lio_sam)/launch/include/module_navsat.launch" />
+  <!--- Robot State TF -->
+  <include file="$(find lio_sam)/launch/include/module_robot_state_publisher.launch" />
 
-    <!--- Run Rviz-->
-    <include file="$(find lio_sam)/launch/include/module_rviz.launch" />
+  <!--- Run Navsat -->
+  <include file="$(find lio_sam)/launch/include/module_navsat.launch" />
 
+  <!--- Run Rviz-->
+  <include file="$(find lio_sam)/launch/include/module_rviz.launch" />
 </launch>
