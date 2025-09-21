@@ -19,6 +19,7 @@
 #include <gtsam/nonlinear/ISAM2.h>
 
 #include "Scancontext.h"
+#include <std_msgs/Float32.h>
 
 
 using namespace gtsam;
@@ -113,6 +114,7 @@ public:
     ros::Subscriber subCloud;
     ros::Subscriber subGPS;
     ros::Subscriber subLoop;
+    ros::Subscriber subMappingSurfLeafSize;
 
     std::deque<nav_msgs::Odometry> gpsQueue;
     lio_sam::cloud_info cloudInfo;
@@ -227,6 +229,7 @@ public:
         subCloud = nh.subscribe<lio_sam::cloud_info>("lio_sam/feature/cloud_info", 1, &mapOptimization::laserCloudInfoHandler, this, ros::TransportHints().tcpNoDelay());
         subGPS   = nh.subscribe<nav_msgs::Odometry> (gpsTopic, 200, &mapOptimization::gpsHandler, this, ros::TransportHints().tcpNoDelay());
         subLoop  = nh.subscribe<std_msgs::Float64MultiArray>("lio_loop/loop_closure_detection", 1, &mapOptimization::loopInfoHandler, this, ros::TransportHints().tcpNoDelay());
+        subMappingSurfLeafSize = nh.subscribe<std_msgs::Float32>("lio_sam/params/mapping_surf_leaf_size", 1, &mapOptimization::mappingSurfLeafSizeHandler, this, ros::TransportHints().tcpNoDelay());
 
         pubHistoryKeyFrames   = nh.advertise<sensor_msgs::PointCloud2>("lio_sam/mapping/icp_loop_closure_history_cloud", 1);
         pubIcpKeyFrames       = nh.advertise<sensor_msgs::PointCloud2>("lio_sam/mapping/icp_loop_closure_corrected_cloud", 1);
@@ -602,6 +605,26 @@ public:
 
         while (loopInfoVec.size() > 5)
             loopInfoVec.pop_front();
+    }
+
+    // Runtime parameter update: mappingSurfLeafSize
+    void mappingSurfLeafSizeHandler(const std_msgs::Float32::ConstPtr& msg)
+    {
+        const float newSize = msg->data;
+        if (newSize <= 0.0f) {
+            ROS_WARN("mappingSurfLeafSize update ignored: value must be > 0 (got %.6f)", newSize);
+            return;
+        }
+
+        // Synchronize with main processing
+        std::lock_guard<std::mutex> lock(mtx);
+
+        // Update parameter and reconfigure filters
+        mappingSurfLeafSize = newSize;
+        downSizeFilterSurf.setLeafSize(newSize, newSize, newSize);
+        downSizeFilterICP.setLeafSize(newSize, newSize, newSize);
+
+        ROS_INFO("Updated mappingSurfLeafSize to %.6f at runtime", newSize);
     }
 
     void performRSLoopClosure()
